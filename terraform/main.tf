@@ -159,9 +159,18 @@ resource "aws_lambda_permission" "apigw_lambda_permission" {
   source_arn    = "${aws_api_gateway_rest_api.image_api.execution_arn}/*/*"
 }
 
-# Deployment of the API
 resource "aws_api_gateway_deployment" "api_deployment" {
-  depends_on = [aws_api_gateway_integration.lambda_integration]
+  depends_on  = [aws_api_gateway_integration.lambda_integration]
   rest_api_id = aws_api_gateway_rest_api.image_api.id
-  stage_name  = "prod"
+  triggers = {
+    redeployment = sha1(jsonencode(aws_api_gateway_rest_api.image_api))
+  }
+}
+
+resource "aws_api_gateway_stage" "prod_stage" {
+  stage_name    = "prod"
+  rest_api_id   = aws_api_gateway_rest_api.image_api.id
+  deployment_id = aws_api_gateway_deployment.api_deployment.id
+
+  # Optional: enable logging, metrics, or other settings here
 }
