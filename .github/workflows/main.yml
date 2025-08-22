@@ -19,10 +19,6 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
-        
-    - name: test s3 access
-      run: |
-        aws s3 ls
 
     - name: Setup Python for packaging
       uses: actions/setup-python@v4
@@ -36,7 +32,7 @@ jobs:
 
     - name: Copy Lambda function code
       run: |
-        cp main.py lambda_package/
+        cp lambda_function.py lambda_package/
 
     - name: Zip lambda deployment package
       run: |
