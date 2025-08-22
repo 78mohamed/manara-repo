@@ -38,8 +38,11 @@ jobs:
       run: |
         cd lambda_package
         zip -r ../image_processor.zip .
-        mv image_processor.zip terraform/
 
+  - name: Move packaged lambda zip to terraform directory
+    run: |
+      mv image_processor.zip terraform/
+        
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2
       with:
