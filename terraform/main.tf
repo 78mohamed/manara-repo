@@ -2,6 +2,14 @@ provider "aws" {
   region = "us-east-1"
 }
 
+terraform {
+  backend "s3" {
+    bucket = "devops-project-2308"
+    key    = "terraform.tfstate"
+    region = "us-east-1"   
+  }
+}
+
 # Single S3 bucket for both original and processed images
 resource "aws_s3_bucket" "image_bucket" {
   bucket = "image-processing-bucket-study"
