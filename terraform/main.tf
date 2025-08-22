@@ -168,12 +168,18 @@ resource "aws_api_gateway_deployment" "api_deployment" {
   triggers = {
     redeployment = sha1(jsonencode(aws_api_gateway_rest_api.image_api))
   }
+  
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_api_gateway_stage" "prod_stage" {
   stage_name    = "prod"
   rest_api_id   = aws_api_gateway_rest_api.image_api.id
   deployment_id = aws_api_gateway_deployment.api_deployment.id
+
+  depends_on = [aws_api_gateway_deployment.api_deployment]
 
   # Optional: enable logging, metrics, or other settings here
 }
