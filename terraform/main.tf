@@ -15,10 +15,14 @@ resource "aws_s3_bucket" "image_bucket" {
   bucket = "image-processing-bucket-study"
 }
 
-# S3 bucket ACL (using new resource instead of deprecated argument)
-resource "aws_s3_bucket_acl" "image_bucket_acl" {
+# S3 bucket public access block (replaces ACL for security)
+resource "aws_s3_bucket_public_access_block" "image_bucket_pab" {
   bucket = aws_s3_bucket.image_bucket.id
-  acl    = "private"
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 
 # IAM role for Lambda
@@ -80,7 +84,7 @@ resource "aws_iam_role_policy" "lambda_policy" {
   })
 }
 
-# DynamoDB table for image metadata (moved before Lambda to resolve dependency)
+# DynamoDB table for image metadata
 resource "aws_dynamodb_table" "image_metadata" {
   name         = "image_metadata"
   billing_mode = "PAY_PER_REQUEST"
@@ -177,28 +181,29 @@ resource "aws_lambda_permission" "apigw_lambda_permission" {
   source_arn    = "${aws_api_gateway_rest_api.image_api.execution_arn}/*/*"
 }
 
+# API Gateway deployment
 resource "aws_api_gateway_deployment" "api_deployment" {
-  depends_on  = [aws_api_gateway_integration.lambda_integration]
   rest_api_id = aws_api_gateway_rest_api.image_api.id
-  triggers = {
-    redeployment = sha1(jsonencode([
-      aws_api_gateway_rest_api.image_api.body,
-      aws_api_gateway_method.post_upload.id,
-      aws_api_gateway_integration.lambda_integration.id
-    ]))
+
+  depends_on = [
+    aws_api_gateway_method.post_upload,
+    aws_api_gateway_integration.lambda_integration
+  ]
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
+# API Gateway stage
 resource "aws_api_gateway_stage" "prod_stage" {
-  stage_name    = "prod"
-  rest_api_id   = aws_api_gateway_rest_api.image_api.id
   deployment_id = aws_api_gateway_deployment.api_deployment.id
-
-  depends_on = [aws_api_gateway_deployment.api_deployment]
+  rest_api_id   = aws_api_gateway_rest_api.image_api.id
+  stage_name    = "prod"
 }
 
 # Output the API Gateway URL for testing
 output "api_gateway_url" {
-  value = "${aws_api_gateway_rest_api.image_api.execution_arn}/prod/upload"
+  value = "https://${aws_api_gateway_rest_api.image_api.id}.execute-api.us-east-1.amazonaws.com/prod/upload"
   description = "API Gateway URL for uploading images"
 }
