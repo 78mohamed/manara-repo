@@ -38,6 +38,7 @@ jobs:
       run: |
         cd lambda_package
         zip -r ../image_processor.zip .
+        mv image_processor.zip terraform/
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2
