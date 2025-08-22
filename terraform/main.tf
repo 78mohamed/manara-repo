@@ -77,12 +77,21 @@ resource "aws_lambda_function" "image_processor" {
   timeout          = 15
   environment {
     variables = {
-      BUCKET_NAME = aws_s3_bucket.image_bucket.bucket
+      BUCKET_NAME   = aws_s3_bucket.image_bucket.bucket
       UPLOAD_PREFIX = "uploads/"
       RESIZED_PREFIX = "resized/"
-      DDB_TABLE = aws_dynamodb_table.image_metadata.name
+      DDB_TABLE     = aws_dynamodb_table.image_metadata.name
     }
   }
+}
+
+# Lambda permission to allow S3 invocation
+resource "aws_lambda_permission" "allow_s3_invocation" {
+  statement_id  = "AllowS3Invoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.image_processor.function_name
+  principal     = "s3.amazonaws.com"
+  source_arn    = aws_s3_bucket.image_bucket.arn
 }
 
 # S3 bucket notification to trigger Lambda on uploads under uploads/ prefix
@@ -95,16 +104,10 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
     filter_prefix       = "uploads/"
   }
 
-  depends_on = [aws_lambda_function.image_processor]
-}
-
-# Lambda permission to allow S3 invocation
-resource "aws_lambda_permission" "allow_s3_invocation" {
-  statement_id  = "AllowS3Invoke"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.image_processor.function_name
-  principal     = "s3.amazonaws.com"
-  source_arn    = aws_s3_bucket.image_bucket.arn
+  depends_on = [
+    aws_lambda_function.image_processor,
+    aws_lambda_permission.allow_s3_invocation
+  ]
 }
 
 # DynamoDB table for image metadata
@@ -142,12 +145,12 @@ resource "aws_api_gateway_method" "post_upload" {
 
 # Lambda integration with API Gateway POST /upload
 resource "aws_api_gateway_integration" "lambda_integration" {
-  rest_api_id = aws_api_gateway_rest_api.image_api.id
-  resource_id = aws_api_gateway_resource.upload_resource.id
-  http_method = aws_api_gateway_method.post_upload.http_method
+  rest_api_id             = aws_api_gateway_rest_api.image_api.id
+  resource_id             = aws_api_gateway_resource.upload_resource.id
+  http_method             = aws_api_gateway_method.post_upload.http_method
   integration_http_method = "POST"
-  type        = "AWS_PROXY"
-  uri         = aws_lambda_function.image_processor.invoke_arn
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.image_processor.invoke_arn
 }
 
 # Grant API Gateway permission to invoke Lambda
