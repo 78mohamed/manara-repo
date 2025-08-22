@@ -13,6 +13,11 @@ terraform {
 # Single S3 bucket for both original and processed images
 resource "aws_s3_bucket" "image_bucket" {
   bucket = "image-processing-bucket-study"
+}
+
+# S3 bucket ACL (using new resource instead of deprecated argument)
+resource "aws_s3_bucket_acl" "image_bucket_acl" {
+  bucket = aws_s3_bucket.image_bucket.id
   acl    = "private"
 }
 
@@ -33,7 +38,7 @@ resource "aws_iam_role" "lambda_exec_role" {
   })
 }
 
-# IAM policy for Lambda to access S3 and CloudWatch
+# IAM policy for Lambda to access S3, DynamoDB and CloudWatch
 resource "aws_iam_role_policy" "lambda_policy" {
   name = "lambda_s3_policy"
   role = aws_iam_role.lambda_exec_role.id
@@ -54,6 +59,16 @@ resource "aws_iam_role_policy" "lambda_policy" {
       },
       {
         Action = [
+          "dynamodb:PutItem",
+          "dynamodb:GetItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem"
+        ],
+        Effect = "Allow",
+        Resource = aws_dynamodb_table.image_metadata.arn
+      },
+      {
+        Action = [
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents"
@@ -63,6 +78,18 @@ resource "aws_iam_role_policy" "lambda_policy" {
       }
     ]
   })
+}
+
+# DynamoDB table for image metadata (moved before Lambda to resolve dependency)
+resource "aws_dynamodb_table" "image_metadata" {
+  name         = "image_metadata"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "image_id"
+
+  attribute {
+    name = "image_id"
+    type = "S"
+  }
 }
 
 # Lambda function
@@ -110,18 +137,6 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
   ]
 }
 
-# DynamoDB table for image metadata
-resource "aws_dynamodb_table" "image_metadata" {
-  name         = "image_metadata"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "image_id"
-
-  attribute {
-    name = "image_id"
-    type = "S"
-  }
-}
-
 # API Gateway REST API
 resource "aws_api_gateway_rest_api" "image_api" {
   name        = "ImageUploadAPI"
@@ -166,11 +181,11 @@ resource "aws_api_gateway_deployment" "api_deployment" {
   depends_on  = [aws_api_gateway_integration.lambda_integration]
   rest_api_id = aws_api_gateway_rest_api.image_api.id
   triggers = {
-    redeployment = sha1(jsonencode(aws_api_gateway_rest_api.image_api))
-  }
-  
-  lifecycle {
-    prevent_destroy = true
+    redeployment = sha1(jsonencode([
+      aws_api_gateway_rest_api.image_api.body,
+      aws_api_gateway_method.post_upload.id,
+      aws_api_gateway_integration.lambda_integration.id
+    ]))
   }
 }
 
@@ -180,6 +195,10 @@ resource "aws_api_gateway_stage" "prod_stage" {
   deployment_id = aws_api_gateway_deployment.api_deployment.id
 
   depends_on = [aws_api_gateway_deployment.api_deployment]
+}
 
-  # Optional: enable logging, metrics, or other settings here
+# Output the API Gateway URL for testing
+output "api_gateway_url" {
+  value = "${aws_api_gateway_rest_api.image_api.execution_arn}/prod/upload"
+  description = "API Gateway URL for uploading images"
 }
