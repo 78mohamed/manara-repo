@@ -21,7 +21,8 @@ def process_image(file_name, image_bytes, content_type):
     with Image.open(BytesIO(image_bytes)) as img:
         ratio = RESIZE_WIDTH / float(img.width)
         height = int((float(img.height) * float(ratio)))
-        resized_img = img.resize((RESIZE_WIDTH, height), Image.ANTIALIAS)
+        # Use Image.LANCZOS instead of Image.ANTIALIAS
+        resized_img = img.resize((RESIZE_WIDTH, height), Image.LANCZOS)
         
         buffer = BytesIO()
         resized_img.save(buffer, format=img.format)
@@ -65,9 +66,8 @@ def handle_api_event(event):
         if is_base64:
             image_bytes = base64.b64decode(body)
         else:
-            image_bytes = body.encode('utf-8')  # assume plain text base64 or binary encoded as string
+            image_bytes = body.encode('utf-8')
 
-        # You'll need to send 'filename' as query param or part of body, here simplified
         file_name = event.get('queryStringParameters', {}).get('filename', f'image_{datetime.utcnow().timestamp()}.jpg')
         key = f"{UPLOAD_PREFIX}{file_name}"
 
@@ -88,10 +88,17 @@ def handle_api_event(event):
         }
 
 def lambda_handler(event, context):
-    if 'Records' in event and event['Records'] and 's3' in event['Records'][0]:
-        # Triggered by S3
-        handle_s3_event(event)
-        return {'statusCode': 200, 'body': 'Processed S3 event'}
-    else:
-        # Triggered via API Gateway
-        return handle_api_event(event)
+    try:
+        if 'Records' in event and event['Records'] and 's3' in event['Records'][0]:
+            # Triggered by S3
+            handle_s3_event(event)
+            return {'statusCode': 200, 'body': 'Processed S3 event'}
+        else:
+            # Triggered via API Gateway
+            return handle_api_event(event)
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': str(e)})
+        }
