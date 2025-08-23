@@ -11,6 +11,17 @@ This project is a serverless image processing application where users upload ima
 - **DynamoDB**: A table to store image metadata.
 - **API Gateway**: Can be added to expose an API for uploads.
 
+## How does the code work
+The Lambda function serves as a **dual-purpose image processor** that can handle both S3-triggered events and direct API Gateway requests for image upload and processing.
+
+  ### Key Features
+  -  **Dual Event Handler** → Processes both S3 bucket events and API Gateway HTTP requests
+  -  **Image Resizing** → Automatically resizes images to 800px width while maintaining aspect ratio
+  -  **Metadata Storage** → Stores processing metadata in DynamoDB table
+  -  **Format Preservation** → Maintains original image format during resizing operations
+  -  **Error Handling** → Comprehensive error handling with detailed logging
+  -  **Environment Configuration** → Uses environment variables for flexible deployment
+
 ## Deployment
 - Uses Terraform to define infrastructure.
 - Uses GitHub Actions for CI/CD to deploy Terraform changes automatically.
