@@ -9,7 +9,7 @@ This project is a serverless image processing application where users upload ima
 - **AWS Lambda**: Function to process images (resize, watermark).
 - **IAM Roles and Policies**: For Lambda execution and S3 access.
 - **DynamoDB**: A table to store image metadata.
-- ** API Gateway**: Can be added to expose an API for uploads.
+- **API Gateway**: Can be added to expose an API for uploads.
 
 ## Deployment
 - Uses Terraform to define infrastructure.
