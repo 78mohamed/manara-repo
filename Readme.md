@@ -4,7 +4,8 @@
 This project is a serverless image processing application where users upload images to an S3 bucket. This triggers an AWS Lambda function that processes and resizes the images before storing them in another S3 bucket.
 
 ## Architecture
-- **Amazon S3**: Two buckets are used, one for original images and another for processed/resized images.
+![diagram Image](diagram.jpeg)
+- **Amazon S3**: S3 bucket is used, one for original images and for processed/resized images.
 - **AWS Lambda**: Function to process images (resize, watermark).
 - **IAM Roles and Policies**: For Lambda execution and S3 access.
 - **DynamoDB**: A table to store image metadata.
