@@ -66,52 +66,49 @@ def handle_s3_event(event):
 
 def handle_api_event(event):
     try:
-        print(f"API Gateway event: {json.dumps(event)}")
+        print(f"API Gateway event keys: {list(event.keys())}")
         
         body = event.get('body', '')
         is_base64 = event.get('isBase64Encoded', False)
         
-        # Handle different content types from API Gateway
-        if is_base64:
-            print("Decoding base64 encoded body")
+        if not body:
+            return {
+                'statusCode': 400,
+                'body': json.dumps({'error': 'No body content received'})
+            }
+        
+        print(f"Body type: {type(body)}, isBase64Encoded: {is_base64}")
+        
+        # API Gateway sends binary data as base64 string regardless of isBase64Encoded flag
+        try:
             image_bytes = base64.b64decode(body)
-        else:
-            # API Gateway sends binary data as base64 string even when isBase64Encoded is False
-            if isinstance(body, str):
-                print("Body is string, attempting base64 decode")
-                try:
-                    # API Gateway automatically base64 encodes binary data
-                    image_bytes = base64.b64decode(body)
-                    print("Successfully decoded base64 string")
-                except Exception as e:
-                    print(f"Base64 decode failed: {e}")
-                    return {
-                        'statusCode': 400,
-                        'body': json.dumps({'error': 'Invalid image data format'})
-                    }
-            else:
-                print("Body is bytes")
-                image_bytes = body
+            print(f"Successfully decoded base64, image size: {len(image_bytes)} bytes")
+        except Exception as e:
+            print(f"Base64 decode failed: {e}")
+            return {
+                'statusCode': 400,
+                'body': json.dumps({'error': 'Failed to decode image data'})
+            }
+
+        # Validate that we have actual image data
+        if len(image_bytes) < 100:
+            return {
+                'statusCode': 400,
+                'body': json.dumps({'error': f'Image data too small: {len(image_bytes)} bytes'})
+            }
 
         # Get filename from query parameters
         query_params = event.get('queryStringParameters') or {}
         file_name = query_params.get('filename', f'image_{int(datetime.utcnow().timestamp())}.jpg')
         key = f"{UPLOAD_PREFIX}{file_name}"
 
-        print(f"Processing image: {file_name}, size: {len(image_bytes)} bytes")
-
-        # Validate image data
-        if len(image_bytes) < 100:
-            return {
-                'statusCode': 400,
-                'body': json.dumps({'error': 'Image data too small'})
-            }
+        print(f"Processing image: {file_name}")
 
         # Upload original to S3
         s3.put_object(Bucket=BUCKET_NAME, Key=key, Body=image_bytes, ContentType='image/jpeg')
         print(f"Uploaded original image to {key}")
 
-        # Process and resize image
+        # Process and resize image  
         resized_key, size_bytes = process_image(file_name, image_bytes, 'image/jpeg')
         save_metadata(file_name, key, resized_key, size_bytes)
         
@@ -119,8 +116,12 @@ def handle_api_event(event):
 
         return {
             'statusCode': 200,
-            'body': json.dumps({'message': 'Image uploaded and processed', 'resized_url': f's3://{BUCKET_NAME}/{resized_key}'})
+            'body': json.dumps({
+                'message': 'Image uploaded and processed', 
+                'resized_url': f's3://{BUCKET_NAME}/{resized_key}'
+            })
         }
+        
     except Exception as e:
         print(f"Error in handle_api_event: {str(e)}")
         import traceback
@@ -129,6 +130,7 @@ def handle_api_event(event):
             'statusCode': 500,
             'body': json.dumps({'error': str(e)})
         }
+
 
 def lambda_handler(event, context):
     try:
