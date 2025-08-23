@@ -76,16 +76,19 @@ def handle_api_event(event):
             print("Decoding base64 encoded body")
             image_bytes = base64.b64decode(body)
         else:
-            # API Gateway might send binary data as raw bytes
+            # API Gateway sends binary data as base64 string even when isBase64Encoded is False
             if isinstance(body, str):
                 print("Body is string, attempting base64 decode")
                 try:
-                    # Try base64 decode first
+                    # API Gateway automatically base64 encodes binary data
                     image_bytes = base64.b64decode(body)
+                    print("Successfully decoded base64 string")
                 except Exception as e:
-                    print(f"Base64 decode failed: {e}, treating as raw string")
-                    # If not base64, treat as raw binary encoded as latin1
-                    image_bytes = body.encode('latin1')
+                    print(f"Base64 decode failed: {e}")
+                    return {
+                        'statusCode': 400,
+                        'body': json.dumps({'error': 'Invalid image data format'})
+                    }
             else:
                 print("Body is bytes")
                 image_bytes = body
@@ -96,6 +99,13 @@ def handle_api_event(event):
         key = f"{UPLOAD_PREFIX}{file_name}"
 
         print(f"Processing image: {file_name}, size: {len(image_bytes)} bytes")
+
+        # Validate image data
+        if len(image_bytes) < 100:
+            return {
+                'statusCode': 400,
+                'body': json.dumps({'error': 'Image data too small'})
+            }
 
         # Upload original to S3
         s3.put_object(Bucket=BUCKET_NAME, Key=key, Body=image_bytes, ContentType='image/jpeg')
