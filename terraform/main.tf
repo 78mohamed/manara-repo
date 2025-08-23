@@ -141,20 +141,16 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
   ]
 }
 
-# API Gateway REST API
+# API Gateway REST API with binary media types
 resource "aws_api_gateway_rest_api" "image_api" {
-  name        = "ImageUploadAPI"
+  name        = "ImageUploadAPI"  
   description = "API for uploading images to S3"
   
-  # Enable binary media types for images
   binary_media_types = [
-    "image/jpeg",
-    "image/png", 
-    "image/gif",
-    "image/*",
-    "*/*"
+    "*/*"  # Use */* instead of specific types
   ]
 }
+
 
 # API Gateway resource (root + /upload)
 resource "aws_api_gateway_resource" "upload_resource" {
