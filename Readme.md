@@ -3,11 +3,20 @@
 ## Overview
 This project is a serverless image processing application where users upload images to an S3 bucket. This triggers an AWS Lambda function that processes and resizes the images before storing them in another S3 bucket.
 
-## video recordings
-  ### s3 invocation
-  ![](video-recordings/s3-invocation.webm)
-  ### api invocation
-  ![](video-recordings/api-invocation.webm)
+## Video Recordings
+
+### S3 Invocation
+<video width="600" controls>
+  <source src="video-recordings/s3-invocation.webm" type="video/webm">
+  Your browser does not support the video tag.
+</video>
+
+### API Invocation
+<video width="600" controls>
+  <source src="video-recordings/api-invocation.webm" type="video/webm">
+  Your browser does not support the video tag.
+</video>
+
 ## Architecture
 ![diagram Image](diagram.jpeg)
 - **Amazon S3**: S3 bucket is used, one for original images and for processed/resized images.
