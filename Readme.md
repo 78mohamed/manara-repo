@@ -6,16 +6,10 @@ This project is a serverless image processing application where users upload ima
 ## Video Recordings
 
 ### S3 Invocation
-<video width="600" controls>
-  <source src="video-recordings/s3-invocation.webm" type="video/webm">
-  Your browser does not support the video tag.
-</video>
+[Watch S3 Invocation Video](https://drive.google.com/file/d/1u1FUXSOu-yGPbsoXMOtUw5pe80eY-ztD/view?usp=sharing)
 
-### API Invocation
-<video width="600" controls>
-  <source src="video-recordings/api-invocation.webm" type="video/webm">
-  Your browser does not support the video tag.
-</video>
+### API Invocation  
+[Watch API Invocation Video](https://drive.google.com/file/d/1jybm7-7AVurLiFHrGfOUU9vFzyKvONq_/view?usp=sharing)
 
 ## Architecture
 ![diagram Image](diagram.jpeg)
